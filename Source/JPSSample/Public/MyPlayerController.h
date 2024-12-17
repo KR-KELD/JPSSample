@@ -6,7 +6,6 @@
 #include "GameFramework/PlayerController.h"
 #include "MyPlayerController.generated.h"
 
-class UJPSPath;
 /**
  * 
  */
@@ -21,10 +20,6 @@ public:
 	virtual void BeginPlay() override;
 
 public:
-	UFUNCTION(BlueprintCallable)
-	bool JPSPathfind();
-public:
-	UPROPERTY()
-	UJPSPath* JPSPathfinder;
+
 
 };

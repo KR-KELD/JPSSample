@@ -1,0 +1,26 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Maze Generator",
+	"Description": "Generate mazes with various algorithms.",
+	"Category": "Other",
+	"CreatedBy": "LowkeyMe",
+	"CreatedByURL": "https://github.com/1owkeyme",
+	"DocsURL": "https://github.com/1owkeyme/UE5-MazeGeneratorPlugin/",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/75ba43809f8f4be3bc47b41d68a238f9",
+	"SupportURL": "https://discord.gg/SEDe6Mrq",
+	"EngineVersion": "5.4.2",
+	"CanContainContent": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "MazeGenerator",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		}
+	]
+}

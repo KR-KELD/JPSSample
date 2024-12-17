@@ -5,11 +5,12 @@
 #include "CoreMinimal.h"
 
 #include "TDBitArray.h"
+#include "JPSCore.h"
 
 #include "JPSCollision.generated.h"
-/**
- * 
- */
+
+class UJPSPath;
+
 UCLASS()
 class AJPSCollision : public AActor
 {
@@ -21,13 +22,12 @@ public:
 	virtual void BeginPlay() override;
 public:
 	bool CreateMap();
-	void CalcCollision();
 
 	int32 GetWidth() const { return Width; }
 	int32 GetHeight() const{ return Height; }
 	void SetWidth(const int32& InWidth) { Width = InWidth; }
 	void SetHeight(const int32& InHeight) { Height = InHeight; }
-	bool IsOutBound(int32 InX, int32 InY);
+	bool IsOutBound(int32 InX, int32 InY) const;
 	bool IsCollision(int32 InX, int32 InY);
 
 	void SetAt(int32 InX, int32 InY);
@@ -36,8 +36,9 @@ public:
 	int32 GetCloseValue(int32 InX, int32 InY, bool IsXaxis, bool IsForward);
 	int32 GetOpenValue(int32 InX, int32 InY, bool IsXaxis, bool IsForward);
 
-	FVector GetNodeLocation(int32 InX, int32 InY);
-	TPair<int32, int32> GetGridLocation(FVector InLocation);
+	void BuildMap();
+
+	void FindPath(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntPoint>& OutResultPos);
 
 private:
 	int32 GetPosX(int32 InX, int32 InY);
@@ -54,20 +55,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "JPSArea")
 	int32 Height;
 
-	// 셀의 가로 길이
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "JPSArea")
-	float IntervalX;
-	// 셀의 세로 길이
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "JPSArea")
-	float IntervalY;
-	// 셀 검사의 높이 제한
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "JPSArea")
-	float HeightLimit;
-
-	// 디버그
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "JPSArea")
-	bool Debug;
-
 private:
 	static const int64 NPos = ~(0);	//	default npos == -1
 
@@ -76,4 +63,9 @@ private:
 	// Y방향의 2차원 비트배열
 	TDBitArray<int64> YBoundaryPoints;
 	// 서로 다른 2차원 비트배열을 쓰는 이유는 비트 접근은 가로방향(메모리 연속) 으로만 할 수 있기 때문에 서로 대칭되는 비트배열 2가지를 사용한다
+
+public:
+	UPROPERTY()
+	UJPSPath* JPSPathfinder;
+
 };

@@ -16,18 +16,21 @@ class UJPSPath : public UObject
 {
 	GENERATED_BODY()
 public:
-
 	UJPSPath();
 
 	void SetMap(AJPSCollision* InFieldCollision);
 	void DestroyMap();
-	bool Search(FVector InStartLoc, FVector InEndLoc, TArray<FVector>& OutResultPos);
+	bool Search(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntPoint>& OutResultCoord);
 
 private:
 
 	inline bool IsPassable(const JPSCoord& InCoord)
 	{
-		return !FieldCollision->IsCollision(InCoord.X, InCoord.Y);
+		if (FieldCollision.IsValid())
+		{
+			return !FieldCollision->IsOutBound(InCoord.X, InCoord.Y) && !FieldCollision->IsCollision(InCoord.X, InCoord.Y);
+		}
+		return false;
 	}
 
 	inline int32 DirIsDiagonal(const int32 InDir)
@@ -48,10 +51,10 @@ private:
 		return InDirs | 1 << InDir;
 	}
 
-	TPair<int32, int32> GetNorthEndPointReOpenBB(int32 InX, int32 InY);
-	TPair<int32, int32> GetSouthEndPointReOpenBB(int32 InX, int32 InY);
-	TPair<int32, int32> GetEastEndPointReOpenBB(int32 InX, int32 InY);
-	TPair<int32, int32> GetWestEndPointReOpenBB(int32 InX, int32 InY);
+	FIntPoint GetNorthEndPointReOpenBB(int32 InX, int32 InY);
+	FIntPoint GetSouthEndPointReOpenBB(int32 InX, int32 InY);
+	FIntPoint GetEastEndPointReOpenBB(int32 InX, int32 InY);
+	FIntPoint GetWestEndPointReOpenBB(int32 InX, int32 InY);
 
 	JPSCoord NextCoordinate(const JPSCoord& InCoord, const int32 InDir);
 	int32 GetCoordinateDir(const JPSCoord& InSCoord, const JPSCoord& InDirCoord);

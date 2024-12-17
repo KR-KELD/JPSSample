@@ -75,7 +75,6 @@ public:
 	}
 };
 
-
 UCLASS()
 class UJPSHeap : public UObject
 {

@@ -2,42 +2,32 @@
 
 
 #include "JPSCollision.h"
+#include "JPSPath.h"
 
 #include "TDBitArray.h"
 #include "NavigationSystem.h"
 #include "AI/Navigation/NavigationTypes.h"
 
+
 AJPSCollision::AJPSCollision()
 {
+	JPSPathfinder = CreateDefaultSubobject<UJPSPath>(TEXT("JPSPath"));
 	Width = 32;
 	Height = 32;
-	IntervalX = 200.0f;
-	IntervalY = 200.0f;
-	HeightLimit = 1000.0f;
-	Debug = false;
 }
 
 void AJPSCollision::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (CreateMap())
-	{
-		CalcCollision();
-	}
-
-	if (Debug)
-	{
-		FVector BoxExtent = FVector(Height * IntervalX, Width * IntervalY, HeightLimit) / 2.0f;
-		DrawDebugBox(GetWorld(), GetActorLocation(), BoxExtent, FColor::Green, true);
-	}
 }
 
 bool AJPSCollision::CreateMap()
 {
 	// X축 방향 2차원 비트배열 초기화
+	XBoundaryPoints.Empty();
 	XBoundaryPoints.Create(Width, Height);
 	// Y축 방향 2차원 비트배열 초기화
+	YBoundaryPoints.Empty();
 	YBoundaryPoints.Create(Height, Width);
 
 	// 비트배열의 가로 크기보다 맵의 길이가 적게 설정되기 때문에 사용하지 않는 부분을 충돌지점으로 바꾼다
@@ -48,52 +38,10 @@ bool AJPSCollision::CreateMap()
 			SetAt(GridX, GridY);
 		}
 	}
-
 	return true;
 }
 
-void AJPSCollision::CalcCollision()
-{
-	const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-	if (!IsValid(NavSystem))
-	{
-		UE_LOG(LogTemp, Error, TEXT("Not Exist NavSystem"));
-		return;
-	}
-
-	FVector CenterLoc = GetActorLocation();
-	FVector2D LeftTop = FVector2D(CenterLoc.X + (Height * IntervalX / 2.0f), CenterLoc.Y - (Width * IntervalY / 2.0f));
-	for (int32 GridY = 0; GridY < Height; ++GridY)
-	{
-		for (int32 GridX = 0; GridX < Width; ++GridX)
-		{
-			FVector CellLoc = FVector(LeftTop.X + IntervalX * (-0.5f - GridY), LeftTop.Y + IntervalY * (0.5f + GridX), CenterLoc.Z + HeightLimit / 2.0f);
-			FNavLocation NavLocation;
-			FVector Extent = FVector(0.0f, 0.0f, HeightLimit / 2.0f);
-			// 내비메시가 존재하지 않는 구역은 닫힘처리 
-			if (!NavSystem->ProjectPointToNavigation(CellLoc, NavLocation, Extent))
-			{
-				if (Debug)
-				{
-					CellLoc.Z = CenterLoc.Z;
-					DrawDebugSphere(GetWorld(), CellLoc, 30.0f, 10, FColor::Red, true);
-				}
-				SetAt(GridX, GridY);
-			}
-			else
-			{
-				if (Debug)
-				{
-					CellLoc.Z = NavLocation.Location.Z;
-					DrawDebugSphere(GetWorld(), CellLoc, 30.0f, 10, FColor::Green, true);
-				}
-			}
-		}
-	}
-	return;
-}
-
-bool AJPSCollision::IsOutBound(int32 InX, int32 InY)
+bool AJPSCollision::IsOutBound(int32 InX, int32 InY) const
 {
 	if (InX < 0)
 	{
@@ -342,49 +290,25 @@ int32 AJPSCollision::GetOpenValue(int32 InX, int32 InY, bool IsXaxis, bool IsFor
 	}
 }
 
-FVector AJPSCollision::GetNodeLocation(int32 InX, int32 InY)
+void AJPSCollision::BuildMap()
 {
-	const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-	if (!IsValid(NavSystem))
-	{
-		UE_LOG(LogTemp, Error, TEXT("Not Exist NavSystem"));
-		return FVector(FLT_MAX);
-	}
-	FVector CenterLoc = GetActorLocation();
-	FVector2D LeftTop = FVector2D(CenterLoc.X + (Height * IntervalX / 2.0f), CenterLoc.Y - (Width * IntervalY / 2.0f));
+	CreateMap();
 
-	FVector CenterPos = FVector(LeftTop.X + IntervalX * (-0.5f - InY), LeftTop.Y + IntervalY * (0.5f + InX), CenterLoc.Z);
-	FNavLocation NavLocation;
-	FVector Extent = FVector(0.0f, 0.0f, HeightLimit / 2.0f);
-	if (!NavSystem->ProjectPointToNavigation(CenterPos, NavLocation, Extent))
+	if (IsValid(JPSPathfinder))
 	{
-		return FVector(FLT_MAX);
+		JPSPathfinder->SetMap(this);
 	}
-
-	return NavLocation.Location;
 }
 
-TPair<int32, int32> AJPSCollision::GetGridLocation(FVector InLocation)
+void AJPSCollision::FindPath(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntPoint>& OutResultPos)
 {
-	// Key = X, Value = Y
-	TPair<int32, int32> Result = { -1,-1 };
-	FVector CenterLoc = GetActorLocation();
-
-	FVector2D LeftTop = FVector2D(CenterLoc.X + (Height * IntervalX / 2.0f), CenterLoc.Y - (Width * IntervalY / 2.0f));
-	FVector2D RightBottom = FVector2D(CenterLoc.X - (Height * IntervalX / 2.0f), CenterLoc.Y + (Width * IntervalY / 2.0f));
-
-	if (InLocation.Y < LeftTop.Y || InLocation.Y > RightBottom.Y ||
-		InLocation.X > LeftTop.X || InLocation.X < RightBottom.X ||
-		InLocation.Z > CenterLoc.Z + HeightLimit / 2.0f ||
-		InLocation.Z < CenterLoc.Z - HeightLimit / 2.0f)
+	if (!IsValid(JPSPathfinder))
 	{
-		return Result;
+		UE_LOG(LogTemp, Error, TEXT("Not Exist JPSPathfinder"));
+		return;
 	}
 
-	Result.Key = (InLocation.Y - LeftTop.Y) / IntervalY;
-	Result.Value = -(InLocation.X - LeftTop.X) / IntervalX;
-
-	return Result;
+	JPSPathfinder->Search(InStartCoord, InEndCoord, OutResultPos);
 }
 
 int32 AJPSCollision::GetPosX(int32 InX, int32 InY)

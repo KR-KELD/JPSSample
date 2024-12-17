@@ -28,30 +28,27 @@ void UJPSPath::DestroyMap()
 	ClosedList.Clear();
 }
 
-bool UJPSPath::Search(FVector InStartLoc, FVector InEndLoc, TArray<FVector>& OutResultPos)
+bool UJPSPath::Search(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntPoint>& OutResultCoord)
 {
 	if (!FieldCollision.IsValid())
 	{
 		return false;
 	}
 
-	TPair<int32, int32> Start = FieldCollision->GetGridLocation(InStartLoc);
-	TPair<int32, int32> End = FieldCollision->GetGridLocation(InEndLoc);
-
 	//범위 체크
-	if ((Start.Key < 0 || Start.Key >= GridWidth) ||
-		(Start.Value < 0 || Start.Value >= GridHeight) ||
-		(End.Key < 0 || End.Key >= GridWidth) ||
-		(End.Value < 0 || End.Value >= GridHeight) ||
-		(Start.Key == End.Key && Start.Value == End.Value))
+	if ((InStartCoord.X < 0 || InStartCoord.X >= GridWidth) ||
+		(InStartCoord.Y < 0 || InStartCoord.Y >= GridHeight) ||
+		(InEndCoord.X < 0 || InEndCoord.X >= GridWidth) ||
+		(InEndCoord.Y < 0 || InEndCoord.Y >= GridHeight) ||
+		(InStartCoord.X == InEndCoord.X && InStartCoord.Y == InEndCoord.Y))
 	{
 		return false;
 	}
 
 	TArray<JPSCoord> PathResults;
-	EndPos.X = End.Key;
-	EndPos.Y = End.Value;
-	OutResultPos.Empty();
+	EndPos.X = InEndCoord.X;
+	EndPos.Y = InEndCoord.Y;
+	OutResultCoord.Empty();
 	OpenList->ClearHeap();
 	ClosedList.Clear();
 
@@ -59,7 +56,7 @@ bool UJPSPath::Search(FVector InStartLoc, FVector InEndLoc, TArray<FVector>& Out
 	TSharedPtr<FJPSNode> StartNode = MakeShared<FJPSNode>();
 
 	// 시작위치 노드 세팅 방향은 전방향
-	StartNode->Set(nullptr, JPSCoord(Start.Key, Start.Value), EndPos, 8);
+	StartNode->Set(nullptr, JPSCoord(InStartCoord.X, InStartCoord.Y), EndPos, 8);
 
 	// 시작 노드를 오픈
 	OpenList->Insert(StartNode);
@@ -111,11 +108,11 @@ bool UJPSPath::Search(FVector InStartLoc, FVector InEndLoc, TArray<FVector>& Out
 						}
 
 						// 경로 단순화
-						PullingString(PathResults);
+						//PullingString(PathResults);
 						// 3D좌표화
 						for (int32 Node = 0; Node < PathResults.Num(); Node++)
 						{
-							OutResultPos.Add(FieldCollision->GetNodeLocation(PathResults[Node].X, PathResults[Node].Y));
+							OutResultCoord.Add(FIntPoint(PathResults[Node].X, PathResults[Node].Y));
 						}
 
 						return true;
@@ -147,18 +144,18 @@ bool UJPSPath::Search(FVector InStartLoc, FVector InEndLoc, TArray<FVector>& Out
 	return false;
 }
 
-TPair<int32, int32> UJPSPath::GetNorthEndPointReOpenBB(int32 InX, int32 InY)
+FIntPoint UJPSPath::GetNorthEndPointReOpenBB(int32 InX, int32 InY)
 {
 	if (InX < 0 || InX >= GridWidth)
 	{
-		return TPair<int32, int32>(-1, -1);
+		return FIntPoint(-1, -1);
 	}
 
 	if (FieldCollision->IsCollision(InX, InY))
 	{
 		// 현재 위치가 이동 불가능 지역이기때문에 다음에 이동 가능한 영역 두가지를 담는다
 		int32 OpenPos = FieldCollision->GetOpenValue(InX, InY, false, false);
-		return TPair<int32, int32>(OpenPos, OpenPos);
+		return FIntPoint(OpenPos, OpenPos);
 	}
 	else
 	{
@@ -168,61 +165,61 @@ TPair<int32, int32> UJPSPath::GetNorthEndPointReOpenBB(int32 InX, int32 InY)
 		// 충돌지점을 기준으로 충돌지점 이후에 나오는 오픈 지점을 찾는다
 		int32 OpenPos = FieldCollision->GetOpenValue(InX, ClosePos, false, false);
 		// 가장 가까운 오픈지점과 충돌지점 이후의 오픈 지점을 찾는다
-		return TPair<int32, int32>(ClosePos + 1, OpenPos);
+		return FIntPoint(ClosePos + 1, OpenPos);
 	}
 }
 
-TPair<int32, int32> UJPSPath::GetSouthEndPointReOpenBB(int32 InX, int32 InY)
+FIntPoint UJPSPath::GetSouthEndPointReOpenBB(int32 InX, int32 InY)
 {
 	if (InX < 0 || InX >= GridWidth)
-		return TPair<int32, int32>(GridHeight, GridHeight);
+		return FIntPoint(GridHeight, GridHeight);
 
 	if (FieldCollision->IsCollision(InX, InY))
 	{
 		int32 OpenPos = FieldCollision->GetOpenValue(InX, InY, false, true);
-		return TPair<int32, int32>(OpenPos, OpenPos);
+		return FIntPoint(OpenPos, OpenPos);
 	}
 	else
 	{
 		int32 ClosePos = FieldCollision->GetCloseValue(InX, InY, false, true);
 		int32 OpenPos = FieldCollision->GetOpenValue(InX, ClosePos, false, true);
-		return TPair<int32, int32>(ClosePos - 1, OpenPos);
+		return FIntPoint(ClosePos - 1, OpenPos);
 	}
 }
 
-TPair<int32, int32> UJPSPath::GetEastEndPointReOpenBB(int32 InX, int32 InY)
+FIntPoint UJPSPath::GetEastEndPointReOpenBB(int32 InX, int32 InY)
 {
 	if (InY < 0 || InY >= GridHeight)
-		return TPair<int32, int32>(GridWidth, GridWidth);
+		return FIntPoint(GridWidth, GridWidth);
 
 	if (FieldCollision->IsCollision(InX, InY))
 	{
 		int32 OpenPos = FieldCollision->GetOpenValue(InX, InY, true, true);
-		return TPair<int32, int32>(OpenPos, OpenPos);
+		return FIntPoint(OpenPos, OpenPos);
 	}
 	else
 	{
 		int32 ClosePos = FieldCollision->GetCloseValue(InX, InY, true, true);
 		int32 OpenPos = FieldCollision->GetOpenValue(ClosePos, InY, true, true);
-		return TPair<int32, int32>(ClosePos - 1, OpenPos);
+		return FIntPoint(ClosePos - 1, OpenPos);
 	}
 }
 
-TPair<int32, int32> UJPSPath::GetWestEndPointReOpenBB(int32 InX, int32 InY)
+FIntPoint UJPSPath::GetWestEndPointReOpenBB(int32 InX, int32 InY)
 {
 	if (InY < 0 || InY >= GridHeight)
-		return TPair<int32, int32>(-1, -1);
+		return FIntPoint(-1, -1);
 
 	if (FieldCollision->IsCollision(InX, InY))
 	{
 		int32 OpenPos = FieldCollision->GetOpenValue(InX, InY, true, false);
-		return TPair<int32, int32>(OpenPos, OpenPos);
+		return FIntPoint(OpenPos, OpenPos);
 	}
 	else
 	{
 		int32 ClosePos = FieldCollision->GetCloseValue(InX, InY, true, false);
 		int32 OpenPos = FieldCollision->GetOpenValue(ClosePos, InY, true, false);
-		return TPair<int32, int32>(ClosePos + 1, OpenPos);
+		return FIntPoint(ClosePos + 1, OpenPos);
 	}
 }
 
@@ -325,7 +322,7 @@ bool UJPSPath::GetJumpPoint(JPSCoord InSCoord, const char direction, JPSCoord& O
 	}
 
 	bool Ret = false;
-	TPair<int32, int32> Up, Center, Down;
+	FIntPoint Up, Center, Down;
 	// 진행방향에 따라
 	switch (direction)
 	{
@@ -343,7 +340,7 @@ bool UJPSPath::GetJumpPoint(JPSCoord InSCoord, const char direction, JPSCoord& O
 		Down = GetNorthEndPointReOpenBB(InSCoord.X + 1, InSCoord.Y);
 
 		// x좌표 일치, 도달점의 y좌표가 진행방향에 있음, 도달점의 y좌표보다 현재위치에서 탐색된 가장 먼 openpoint가 도달점과 현재위치 사이에 있음
-		if (InSCoord.X == EndPos.X && InSCoord.Y >= EndPos.Y && Center.Key <= EndPos.Y)
+		if (InSCoord.X == EndPos.X && InSCoord.Y >= EndPos.Y && Center.X <= EndPos.Y)
 		{
 			OutJumpPoint = EndPos;
 			return true;
@@ -357,15 +354,15 @@ bool UJPSPath::GetJumpPoint(JPSCoord InSCoord, const char direction, JPSCoord& O
 		// Down 위치에서의 다음 오픈 지점이 현재 위치의 이동 가능한 영역보다 최소 2칸 뒤에 있다
 		// 위 두 조건중 하나라도 만족하면 Down 위치에서의 오픈지점 아랫부분을 강제이웃으로 정한다
 		// 위의 강제이웃 조건이랑 부합
-		if (Down.Key != -1 && ((Down.Value > -1 && Down.Key > Center.Key && Down.Value + 2 > Center.Key) || (Down.Key == Down.Value && Down.Key + 2 > Center.Key)))
+		if (Down.X != -1 && ((Down.Y > -1 && Down.X > Center.X && Down.Y + 2 > Center.X) || (Down.X == Down.Y && Down.X + 2 > Center.X)))
 		{
-			OutJumpPoint = JPSCoord(InSCoord.X, Down.Value + 1);
+			OutJumpPoint = JPSCoord(InSCoord.X, Down.Y + 1);
 			Ret = true;
 		}
-		if (Up.Key != -1 && ((Up.Value > -1 && Up.Key > Center.Key && Up.Value + 2 > Center.Key) || (Up.Key == Up.Value && Up.Key + 2 > Center.Key)))
+		if (Up.X != -1 && ((Up.Y > -1 && Up.X > Center.X && Up.Y + 2 > Center.X) || (Up.X == Up.Y && Up.X + 2 > Center.X)))
 		{
 			// 이전에 설정된 점프포인트보다 현재 지점에 가까운 곳을 고른다
-			OutJumpPoint = JPSCoord(InSCoord.X, Ret ? FMath::Max(OutJumpPoint.Y, Up.Value + 1) : Up.Value + 1);
+			OutJumpPoint = JPSCoord(InSCoord.X, Ret ? FMath::Max(OutJumpPoint.Y, Up.Y + 1) : Up.Y + 1);
 			return true;
 		}
 		return Ret;
@@ -374,20 +371,20 @@ bool UJPSPath::GetJumpPoint(JPSCoord InSCoord, const char direction, JPSCoord& O
 		Center = GetEastEndPointReOpenBB(InSCoord.X, InSCoord.Y);
 		Down = GetEastEndPointReOpenBB(InSCoord.X, InSCoord.Y + 1);
 
-		if (InSCoord.Y == EndPos.Y && InSCoord.X <= EndPos.X && Center.Key >= EndPos.X)
+		if (InSCoord.Y == EndPos.Y && InSCoord.X <= EndPos.X && Center.X >= EndPos.X)
 		{
 			OutJumpPoint = EndPos;
 			return true;
 		}
 
-		if (Down.Key != GridWidth && ((Down.Value < GridWidth && Down.Key < Center.Key && Down.Value - 2 < Center.Key) || (Down.Key == Down.Value && Down.Key - 2 < Center.Key)))
+		if (Down.X != GridWidth && ((Down.Y < GridWidth && Down.X < Center.X && Down.Y - 2 < Center.X) || (Down.X == Down.Y && Down.X - 2 < Center.X)))
 		{
-			OutJumpPoint = JPSCoord(Down.Value - 1, InSCoord.Y);
+			OutJumpPoint = JPSCoord(Down.Y - 1, InSCoord.Y);
 			Ret = true;
 		}
-		if (Up.Key != GridWidth && ((Up.Value < GridWidth && Up.Key < Center.Key && Up.Value - 2 < Center.Key) || (Up.Key == Up.Value && Up.Key - 2 < Center.Key)))
+		if (Up.X != GridWidth && ((Up.Y < GridWidth && Up.X < Center.X && Up.Y - 2 < Center.X) || (Up.X == Up.Y && Up.X - 2 < Center.X)))
 		{
-			OutJumpPoint = JPSCoord(Ret ? FMath::Min(OutJumpPoint.X, Up.Value - 1) : Up.Value - 1, InSCoord.Y);
+			OutJumpPoint = JPSCoord(Ret ? FMath::Min(OutJumpPoint.X, Up.Y - 1) : Up.Y - 1, InSCoord.Y);
 			return true;
 		}
 		return Ret;
@@ -396,19 +393,19 @@ bool UJPSPath::GetJumpPoint(JPSCoord InSCoord, const char direction, JPSCoord& O
 		Center = GetSouthEndPointReOpenBB(InSCoord.X, InSCoord.Y);
 		Down = GetSouthEndPointReOpenBB(InSCoord.X + 1, InSCoord.Y);
 
-		if (InSCoord.X == EndPos.X && InSCoord.Y <= EndPos.Y && Center.Key >= EndPos.Y)
+		if (InSCoord.X == EndPos.X && InSCoord.Y <= EndPos.Y && Center.X >= EndPos.Y)
 		{
 			OutJumpPoint = EndPos;
 			return true;
 		}
-		if (Down.Key != GridHeight && ((Down.Value < GridHeight && Down.Key < Center.Key && Down.Value - 2 < Center.Key) || (Down.Key == Down.Value && Down.Key - 2 < Center.Key)))
+		if (Down.X != GridHeight && ((Down.Y < GridHeight && Down.X < Center.X && Down.Y - 2 < Center.X) || (Down.X == Down.Y && Down.X - 2 < Center.X)))
 		{
-			OutJumpPoint = JPSCoord(InSCoord.X, Down.Value - 1);
+			OutJumpPoint = JPSCoord(InSCoord.X, Down.Y - 1);
 			Ret = true;
 		}
-		if (Up.Key != GridHeight && ((Up.Value < GridHeight && Up.Key < Center.Key && Up.Value - 2 < Center.Key) || (Up.Key == Up.Value && Up.Key - 2 < Center.Key)))
+		if (Up.X != GridHeight && ((Up.Y < GridHeight && Up.X < Center.X && Up.Y - 2 < Center.X) || (Up.X == Up.Y && Up.X - 2 < Center.X)))
 		{
-			OutJumpPoint = JPSCoord(InSCoord.X, Ret ? FMath::Min(OutJumpPoint.Y, Up.Value - 1) : Up.Value - 1);
+			OutJumpPoint = JPSCoord(InSCoord.X, Ret ? FMath::Min(OutJumpPoint.Y, Up.Y - 1) : Up.Y - 1);
 			return true;
 		}
 		return Ret;
@@ -417,19 +414,19 @@ bool UJPSPath::GetJumpPoint(JPSCoord InSCoord, const char direction, JPSCoord& O
 		Center = GetWestEndPointReOpenBB(InSCoord.X, InSCoord.Y);
 		Down = GetWestEndPointReOpenBB(InSCoord.X, InSCoord.Y + 1);
 
-		if (InSCoord.Y == EndPos.Y && InSCoord.X >= EndPos.X && Center.Key <= EndPos.X)
+		if (InSCoord.Y == EndPos.Y && InSCoord.X >= EndPos.X && Center.X <= EndPos.X)
 		{
 			OutJumpPoint = EndPos;
 			return true;
 		}
-		if (Down.Key != -1 && ((Down.Value > -1 && Down.Key > Center.Key && Down.Value + 2 > Center.Key) || (Down.Key == Down.Value && Down.Key + 2 > Center.Key)))
+		if (Down.X != -1 && ((Down.Y > -1 && Down.X > Center.X && Down.Y + 2 > Center.X) || (Down.X == Down.Y && Down.X + 2 > Center.X)))
 		{
-			OutJumpPoint = JPSCoord(Down.Value + 1, InSCoord.Y);
+			OutJumpPoint = JPSCoord(Down.Y + 1, InSCoord.Y);
 			Ret = true;
 		}
-		if (Up.Key != -1 && ((Up.Value > -1 && Up.Key > Center.Key && Up.Value + 2 > Center.Key) || (Up.Key == Up.Value && Up.Key + 2 > Center.Key)))
+		if (Up.X != -1 && ((Up.Y > -1 && Up.X > Center.X && Up.Y + 2 > Center.X) || (Up.X == Up.Y && Up.X + 2 > Center.X)))
 		{
-			OutJumpPoint = JPSCoord(Ret ? FMath::Max(OutJumpPoint.X, Up.Value + 1) : Up.Value + 1, InSCoord.Y);
+			OutJumpPoint = JPSCoord(Ret ? FMath::Max(OutJumpPoint.X, Up.Y + 1) : Up.Y + 1, InSCoord.Y);
 			return true;
 		}
 		return Ret;
