@@ -145,6 +145,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Maze")
 	virtual void UpdateMaze();
 
+	TArray<TArray<uint8>> GenerateGrid(int32 InSizeX, int32 InSizeY, EGenerationAlgorithm InUseAlgorithm);
+
 	/** 
 	 * Updates Maze every time any parameter has been changed(except transform).
 	 * 

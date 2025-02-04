@@ -157,6 +157,14 @@ void AMaze::UpdateMaze()
 	EnableCollision(bUseCollision);
 }
 
+TArray<TArray<uint8>> AMaze::GenerateGrid(int32 InSizeX, int32 InSizeY, EGenerationAlgorithm InUseAlgorithm)
+{
+	FMazeSize GridSize;
+	GridSize.X = InSizeX;
+	GridSize.Y = InSizeY;
+	return GenerationAlgorithms[InUseAlgorithm]->GetGrid(GridSize, 1234);
+}
+
 void AMaze::CreateMazeOutline() const
 {
 	FVector Location1{0.f};

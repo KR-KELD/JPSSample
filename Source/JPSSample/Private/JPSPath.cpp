@@ -63,6 +63,7 @@ bool UJPSPath::Search(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntP
 	// 탐색완료된 노드에 시작 노드를 추가
 	ClosedList.SetAt(StartNode->Pos.X, StartNode->Pos.Y, true);
 
+	JPSCoord LastJP;
 	while (OpenList->GetCount())
 	{
 		// 오픈리스트에서 가장 우선순위가 높은 노드 검사 시작
@@ -80,6 +81,7 @@ bool UJPSPath::Search(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntP
 				// 점프포인트가 존재한다면
 				if (!JumpPoint.IsEmpty())
 				{
+					LastJP = JumpPoint;
 					// 도착
 					if (JumpPoint == EndPos)
 					{
@@ -141,6 +143,7 @@ bool UJPSPath::Search(FIntPoint InStartCoord, FIntPoint InEndCoord, TArray<FIntP
 		}
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("JPS Pathfind Failed."), PathResults.Num());
 	return false;
 }
 

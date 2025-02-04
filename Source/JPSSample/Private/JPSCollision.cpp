@@ -168,7 +168,7 @@ int32 AJPSCollision::GetCloseValue(int32 InX, int32 InY, bool IsXaxis, bool IsFo
 		int32 MaxWidths = MaskBound.GetWordWidths();
 		for (int i = 0; i < MaxWidths; ++i)
 		{
-			int32 Pos = IsXaxis ? GetPosX(InX + i * NBitmask, InY) : GetPosY(InX, InY + i * NBitmask);
+			int32 Pos = IsXaxis ? GetPosX(InX - i * NBitmask, InY) : GetPosY(InX, InY - i * NBitmask);
 			if (Pos == NPos)
 			{
 				return -1;
@@ -268,7 +268,7 @@ int32 AJPSCollision::GetOpenValue(int32 InX, int32 InY, bool IsXaxis, bool IsFor
 		int32 MaxWidths = MaskBound.GetWordWidths();
 		for (int i = 0; i < MaxWidths; ++i)
 		{
-			int32 Pos = IsXaxis ? GetPosX(InX + i * NBitmask, InY) : GetPosY(InX, InY + i * NBitmask);
+			int32 Pos = IsXaxis ? GetPosX(InX - i * NBitmask, InY) : GetPosY(InX, InY - i * NBitmask);
 			if (Pos == NPos)
 			{
 				return -1;
